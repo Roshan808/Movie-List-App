@@ -1,95 +1,80 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import React, { useEffect, useState } from 'react';
+import MovieCard from '../app/MovieCard';
+import SearchBar from '../components/SearchBar';
+import Modal from '../components/Modal';
+import styles from './index.module.css';
 
-export default function Home() {
+const Home = () => {
+  const [movies, setMovies] = useState([]);
+  const [filteredMovies, setFilteredMovies] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedMovie, setSelectedMovie] = useState(null);
+
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        const response = await fetch('/movies.json');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        setMovies(data.results);
+        setFilteredMovies(data.results);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMovies();
+  }, []);
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    const lowercasedQuery = query.toLowerCase();
+    const newFilteredMovies = movies.filter(movie =>
+      movie.title.toLowerCase().includes(lowercasedQuery)
+    );
+    setFilteredMovies(newFilteredMovies);
+  };
+  const openModal = (movie) => {
+    setSelectedMovie(movie);
+  };
+
+  const closeModal = () => {
+    setSelectedMovie(null);
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
+    <div className={styles.container}>
+      <h1 className={styles.header}>Movie List App</h1>
+      <SearchBar onSearch={handleSearch} />
+      {loading && <p className={styles.loading}>Loading...</p>}
+      {error && <p className={styles.error}>Error: {error}</p>}
+      <div className={styles.movieList}>
+        {filteredMovies.length > 0 ? (
+          filteredMovies.map(movie => (
+            <MovieCard
+              key={movie.id}
+              poster={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+              name={movie.title}
+              description={movie.overview}
+              rating={movie.vote_average}
+              release_date={movie.release_date}
+              onClick={() => openModal(movie)}
             />
-          </a>
-        </div>
+          ))
+        ) : (
+          <p className={styles.noMovies}>No movies found</p>
+        )}
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+      {selectedMovie && <Modal movie={selectedMovie} onClose={closeModal} />}
+    </div>
   );
-}
+};
+
+export default Home;
